@@ -10,7 +10,7 @@ class Environment:
 	def __init__(
 			self
 	):
-		self.REQ_NUM = 10000  # 请求的总数目
+		self.REQ_NUM = 10  # 请求的总数目
 		self.CPU_ONE = 150.0  # 本地节点CPU总量
 		self.CPU_TWO = 500.0  # 二级节点CPU总量
 		self.BD_WIDTH = 5000  # 5000M的带宽表示线宽为1
@@ -256,7 +256,9 @@ class Environment:
 		plt.style.use('dark_background')
 		fig_path = './state/env_' + str(ReqNo) + '.png'
 		plt.savefig(fig_path)
-		return cv2.imread(fig_path)
+		state = cv2.imread(fig_path,cv2.IMREAD_GRAYSCALE)
+		state = cv2.resize(state,(512,512))
+		return state
 
 	# 根据动作执行下一步操作
 	def step(self, action):
@@ -265,7 +267,7 @@ class Environment:
 		reward = self.get_reward(action, row)       # 该动作获得的奖励
 		self.env_react(action, row)
 
-		if row['ReqNo'] == 9999:
+		if row['ReqNo'] == self.REQ_NUM - 1:
 			is_done = True
 			state = self.observation(row['ReqNo'])
 			return state, reward, is_done
@@ -293,8 +295,13 @@ class Environment:
 if __name__ == '__main__':	
 	env = Environment()
 	observation = env.start()
-	while True:
-		one_action = env.random_action()  # 执行动作
-		environment, one_reward, done = env.step(one_action)
-		if done:		# 游戏结束
-			break
+	count = 0
+	for i_episode in range(3000):
+		observation = env.start()
+		while True:
+			one_action = env.random_action()  # 执行动作
+			environment, one_reward, done = env.step(one_action)
+			# if count > 10:		# 游戏结束
+			print(done)
+			if done:		# 游戏结束
+				break
