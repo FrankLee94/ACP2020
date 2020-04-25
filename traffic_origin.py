@@ -12,7 +12,7 @@ NODE_NUM = 3				# 每个区域产生业务的节点数目
 AREA_NUM = 4				# 一共4个区域
 RATIO_DELAY_SEN = 0.3		# 延时敏感业务占比
 MAX_CPU = 30				# 单个请求最大的CPU
-REQ_NUM = 10000				# 请求的总数目
+REQ_NUM = 20				# 请求的总数目
 
 
 # 产生一个请求Probability_Poisson
@@ -42,8 +42,8 @@ def event_generation(arr_rate, ser_rate):
 	return interval, persist_time, area_id, node_id, cpu, bandwidth, delay_sen 
 
 
-# 产生原始的请求集合 + 排序
-def traffic_generation(arr_rate, ser_rate):
+# 产生原始的请求集合
+def traffic_generation(traffic_file_raw_path, arr_rate, ser_rate):
 	traff_info = {
 		'ReqNo': [], 'area_id': [], 'node_id': [], 'cpu': [], 'timing': [],
 		'persist_time': [], 'bandwidth': [], 'delay_sen': [], 'status': []}
@@ -67,13 +67,21 @@ def traffic_generation(arr_rate, ser_rate):
 		traff_info['status'].append('arrive')
 		traff_info['status'].append('leave')
 	df = pd.DataFrame(traff_info)
+	df.to_excel(traffic_file_raw_path, index=False)
+
+
+# 对请求进行排序
+def sort_traffic(traffic_file_raw_path, traffic_file_sort_path):
+	df = pd.read_excel(traffic_file_raw_path)
 	df = df.sort_values(by='timing', axis=0, ascending=True)
-	return df
+	df.to_excel(traffic_file_sort_path, index=False)
 	
-# 获取最新的df
-def get_new_df():
+
+if __name__ == '__main__':
 	single_erlang = 20
-	arrive_rate = NODE_NUM * AREA_NUM * single_erlang
+	arrive_rate = NODE_NUM * AREA_NUM * single_erlang 
 	service_rate = 1
-	df = traffic_generation(arrive_rate, service_rate)
-	return df
+	traffic_file_raw_ph = './traffic_data/traffic_raw_erlang' + str(single_erlang) + '_num' + str(REQ_NUM) + '.xlsx'
+	traffic_file_sort_ph = './traffic_data/traffic_sort_erlang' + str(single_erlang) + '_num' + str(REQ_NUM) + '.xlsx'
+	traffic_generation(traffic_file_raw_ph, arrive_rate, service_rate)
+	sort_traffic(traffic_file_raw_ph, traffic_file_sort_ph)

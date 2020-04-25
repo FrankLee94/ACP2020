@@ -8,6 +8,7 @@ import pandas as pd
 import networkx as nx
 import random
 import matplotlib.pyplot as plt
+import traffic
 
 REQ_NUM = 10000			# 请求的总数目
 CPU_ONE = 150.0			# 本地节点CPU总量
@@ -251,9 +252,11 @@ def step(action, df, idx, G, vm_locate_idx, curr_load, e_width, ecolors, ncolors
 
 
 def main():
-	for i_episode in range(1):		# 打多局游戏，这里只列了一局
-		traffic_file_sort_ph = './traffic_data/traffic_sort_erlang20_num10000.xlsx'
-		df = pd.read_excel(traffic_file_sort_ph)			# 读取随机事件
+	average_reward = 0
+	for i_episode in range(10):		# 打多局游戏，这里只列了一局
+		#traffic_file_sort_ph = './traffic_data/traffic_sort_erlang20_num10000.xlsx'
+		#df = pd.read_excel(traffic_file_sort_ph)			# 读取随机事件
+		df  = traffic.get_new_df()
 		G = topo_init()		# 拓扑初始化
 		curr_load, vm_locate_idx, e_width = initial()		# 记录网络的参数
 		lws, ncolors, ecolors = graph_init()				# 刻画状态的变量
@@ -270,9 +273,12 @@ def main():
 			if done:
 				# 游戏结束
 				break
-			print(idx)
+		print(i_episode)
 		print('total reward')
 		print(total_reward)
+		average_reward += total_reward
+	print('average_reward')
+	print(average_reward / 10)
 
 
 

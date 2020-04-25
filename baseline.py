@@ -8,6 +8,7 @@ import pandas as pd
 import networkx as nx
 import random
 import matplotlib.pyplot as plt
+import traffic
 
 REQ_NUM = 10000			# 请求的总数目
 CPU_ONE = 150.0			# 本地节点CPU总量
@@ -176,14 +177,14 @@ def find_locate_fcfs(G, current_load, area_id, node_id, cpu):
 
 
 # 先来先服务模型：先使用本节点，接着使用临近节点，最后使用DC。不区分延时敏感与否
-def fcfs(G, current_load, vm_locate_index, edge_width, traffic_file_sort_path):
+def fcfs(G, current_load, vm_locate_index, edge_width, df):
 	lws = [0.0 for i in range(len(route_edges))]			# 边的宽度，随负载增加
 	ncolors = ['0.0' for i in range(18)]					# 节点的颜色，随负载增加，0~1的范围
 	ecolors = ['0' for i in range(len(route_edges))]		# 边的颜色，不变
-	df = pd.read_excel(traffic_file_sort_path)
+	#df = pd.read_excel(traffic_file_sort_path)
 	total_reward = 0
 	for index, row in df.iterrows(): 
-		print(index)
+		#print(index)
 		ReqNo = row['ReqNo']
 		if row['status'] == 'arrive':
 			locate_flag, vm_locate, shortest_path = find_locate_fcfs(G, current_load, 
@@ -205,12 +206,20 @@ def fcfs(G, current_load, vm_locate_index, edge_width, traffic_file_sort_path):
 			if index > 19998:
 				ncolors = ['0.0' for i in range(18)]
 				graph_draw(G, index, 'leave', ncolors, ecolors, lws)
-	print('total reward')
-	print(total_reward)
+	return total_reward
 
 
 if __name__ == '__main__':
-	traffic_file_sort_ph = './traffic_data/traffic_sort_erlang20_num10000.xlsx'
-	G_topo = graph_init()
-	curr_load, vm_locate_idx, e_width = initial()
-	fcfs(G_topo, curr_load, vm_locate_idx, e_width, traffic_file_sort_ph)
+	average_reward = 0
+	for i in range(10):
+		#traffic_file_sort_ph = './traffic_data/traffic_sort_erlang20_num10000.xlsx'
+		
+		G_topo = graph_init()
+		curr_load, vm_locate_idx, e_width = initial()
+		df = traffic.get_new_df()
+		tot_reward = fcfs(G_topo, curr_load, vm_locate_idx, e_width, df)
+		print(i)
+		print(tot_reward)
+		average_reward += tot_reward
+	print('average_reward')
+	print(average_reward / 10)
