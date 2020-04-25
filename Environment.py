@@ -10,7 +10,7 @@ class Environment:
 	def __init__(
 			self
 	):
-		self.REQ_NUM = 10  # 请求的总数目
+		self.REQ_NUM = 100  # 请求的总数目
 		self.CPU_ONE = 150.0  # 本地节点CPU总量
 		self.CPU_TWO = 500.0  # 二级节点CPU总量
 		self.BD_WIDTH = 5000  # 5000M的带宽表示线宽为1
@@ -76,7 +76,7 @@ class Environment:
 	# curr_load：每个节点CPU的使用率
 	# vm_locate_idx：存储请求的分类及具体位置，分类有local, neigh, DC，具体位置为本节点id
 	def initial(self):
-		traffic_file_sort_ph = './traffic_data/traffic_sort_erlang20_num20.xlsx'
+		traffic_file_sort_ph = './traffic_data/traffic_sort_erlang20_num100.xlsx'
 		self.df = pd.read_excel(traffic_file_sort_ph)		# 读取随机事件
 		self.G = self.topo_init()							# 拓扑初始化
 		self.curr_load = [0 for i in range(16)]				# 节点负载,对应每个节点的颜色
@@ -256,9 +256,7 @@ class Environment:
 		plt.style.use('dark_background')
 		fig_path = './state/env_' + str(ReqNo) + '.png'
 		plt.savefig(fig_path)
-		state = cv2.imread(fig_path,cv2.IMREAD_GRAYSCALE)
-		state = cv2.resize(state,(512,512))
-		return state
+		return cv2.imread(fig_path)
 
 	# 根据动作执行下一步操作
 	def step(self, action):
@@ -295,13 +293,8 @@ class Environment:
 if __name__ == '__main__':	
 	env = Environment()
 	observation = env.start()
-	count = 0
-	for i_episode in range(3000):
-		observation = env.start()
-		while True:
-			one_action = env.random_action()  # 执行动作
-			environment, one_reward, done = env.step(one_action)
-			# if count > 10:		# 游戏结束
-			print(done)
-			if done:		# 游戏结束
-				break
+	while True:
+		one_action = env.random_action()  # 执行动作
+		environment, one_reward, done = env.step(one_action)
+		if done:		# 游戏结束
+			break

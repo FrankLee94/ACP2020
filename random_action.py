@@ -204,13 +204,13 @@ def get_reward(action, area_id, node_id, current_load, cpu, bandwidth, delay_sen
 
 # 观察到的是图像
 def observation(G, ReqNo, ncolors, ecolors, lws):
-	plt.clf()
-	nx.draw(G, pos, with_labels=False, node_color=ncolors, node_shape="o",
-			node_size=500, width=lws, edge_color=ecolors)
-	plt.xlim(-8, 8)			# 设置首界面X轴坐标范围
-	plt.ylim(-8, 12)		# 设置首界面Y轴坐标范围
-	fig_path = './state/env_' + str(ReqNo) + '_' + '.png'
-	plt.savefig(fig_path)
+	#plt.clf()
+	#nx.draw(G, pos, with_labels=False, node_color=ncolors, node_shape="o",
+	#		node_size=500, width=lws, edge_color=ecolors)
+	#plt.xlim(-8, 8)			# 设置首界面X轴坐标范围
+	#plt.ylim(-8, 12)		# 设置首界面Y轴坐标范围
+	#fig_path = './state/env_' + str(ReqNo) + '_' + '.png'
+	#plt.savefig(fig_path)
 	return 'environment'		# 这里返回的字符串仅为示意，实际需要返回矩阵
 
 
@@ -218,6 +218,7 @@ def observation(G, ReqNo, ncolors, ecolors, lws):
 def random_action():
 	actions = ['local', 'neigh', 'DC']
 	action = random.choice(actions)
+	#action = 'DC'
 	return action
 
 
@@ -230,7 +231,7 @@ def step(action, df, idx, G, vm_locate_idx, curr_load, e_width, ecolors, ncolors
 					curr_load, row['cpu'], row['bandwidth'], row['delay_sen'])
 	env_react(action, G, row, vm_locate_idx, curr_load, e_width, lws, ncolors)
 
-	if ReqNo == 9999:
+	if ReqNo == REQ_NUM - 1:
 		done = True
 		environment = observation(G, ReqNo, ncolors, ecolors, lws)
 		return environment, reward, done, idx
@@ -251,7 +252,7 @@ def step(action, df, idx, G, vm_locate_idx, curr_load, e_width, ecolors, ncolors
 
 def main():
 	for i_episode in range(1):		# 打多局游戏，这里只列了一局
-		traffic_file_sort_ph = './traffic_data/traffic_sort_20.xlsx'
+		traffic_file_sort_ph = './traffic_data/traffic_sort_erlang20_num10000.xlsx'
 		df = pd.read_excel(traffic_file_sort_ph)			# 读取随机事件
 		G = topo_init()		# 拓扑初始化
 		curr_load, vm_locate_idx, e_width = initial()		# 记录网络的参数
@@ -259,14 +260,19 @@ def main():
 
 		environment = observation(G, 0, ncolors, ecolors, lws)	# 画面初始化
 		idx = 0
+		total_reward = 0
 		while True:
 			action = random_action()						# 执行动作
 			# 下面是step函数
 			environment, reward, done, idx = step(action,
 				df, idx, G, vm_locate_idx, curr_load, e_width, ecolors, ncolors, lws)
+			total_reward += reward
 			if done:
 				# 游戏结束
 				break
+			print(idx)
+		print('total reward')
+		print(total_reward)
 
 
 

@@ -183,7 +183,7 @@ def fcfs(G, current_load, vm_locate_index, edge_width, traffic_file_sort_path):
 	df = pd.read_excel(traffic_file_sort_path)
 	total_reward = 0
 	for index, row in df.iterrows(): 
-		# print(index)
+		print(index)
 		ReqNo = row['ReqNo']
 		if row['status'] == 'arrive':
 			locate_flag, vm_locate, shortest_path = find_locate_fcfs(G, current_load, 
@@ -210,7 +210,7 @@ def fcfs(G, current_load, vm_locate_index, edge_width, traffic_file_sort_path):
 
 
 if __name__ == '__main__':
-	traffic_file_sort_ph = './traffic_data/traffic_sort_20.xlsx'
+	traffic_file_sort_ph = './traffic_data/traffic_sort_erlang20_num10000.xlsx'
 	G_topo = graph_init()
 	curr_load, vm_locate_idx, e_width = initial()
 	fcfs(G_topo, curr_load, vm_locate_idx, e_width, traffic_file_sort_ph)
