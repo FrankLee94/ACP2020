@@ -5,7 +5,7 @@ import cv2
 import io
 import numpy as np
 import PIL
-import reinforce.network.traffic as traffic
+# import reinforce.network.traffic as traffic
 import traffic
 
 
@@ -289,14 +289,46 @@ class Environment:
 		action = random.choice(actions)
 		return action
 	
+	# 使用fcfs测试reward是否正确
+	def fcfs_action(self):
+		row = self.df.iloc[self.idx]
+		action = 0
+
+		node = row['area_id'] * 4 + row['node_id'] + 1
+		# 尝试使用local节点
+		if self.curr_load[node][0] + row['cpu'] <= self.CPU_ONE and \
+			self.curr_load[node][1] + row['ram'] <= self.RAM_ONE:
+			action = 0
+			return action
+		
+		# 尝试使用邻居节点
+		neigh_node = row['area_id'] * 4
+		shortest_path = nx.shortest_path(self.G, source=node, target=neigh_node)
+		if self.curr_load[neigh_node][0] + row['cpu'] <= self.CPU_TWO and \
+			self.curr_load[neigh_node][1] + row['ram'] <= self.RAM_TWO and \
+			self.is_enough_bd(row, shortest_path):
+			action = 1
+			return action
+		
+		# 使用数据中心
+		if row['area_id'] < 2:			# 区域0和1使用数据中心‘16’
+			DC_node = 16
+		else:
+			DC_node = 17
+		shortest_path = nx.shortest_path(self.G, source=node, target=DC_node)
+		if self.is_enough_bd(row, shortest_path):
+			action = 2
+			return action
+		return action
+	
 	'''
 	# 观察到的是图像
 	def observation(self, ReqNo):
 		plt.clf()
 		nx.draw(self.G_graph, self.pos, with_labels=False, node_color=self.ncolors, node_shape="o",
 				node_size=self.nsize, width=self.esize, edge_color=self.ecolors)
-		plt.xlim(-7, 8)			# 设置首界面X轴坐标范围
-		plt.ylim(-7, 8)			# 设置首界面Y轴坐标范围
+		plt.xlim(-8, 10)			# 设置首界面X轴坐标范围
+		plt.ylim(-25, 12)			# 设置首界面Y轴坐标范围
 		plt.style.use('dark_background')
 		buffer_ = io.BytesIO()
 		fig_path = './state/env_' + str(ReqNo) + '.png'
@@ -312,6 +344,7 @@ class Environment:
 
 	'''
 	def observation(self, ReqNo):
+		return 'state'
 		plt.clf()
 		nx.draw(self.G_graph, self.pos, with_labels=False, node_color=self.ncolors, node_shape="o",
 				node_size=self.nsize, width=self.esize, edge_color=self.ecolors)
@@ -327,7 +360,7 @@ class Environment:
 		state = cv2.cvtColor(data, cv2.COLOR_BGR2GRAY)
 		state = cv2.resize(state, (512, 512))
 		cv2.imwrite(fig_path, state)
-		return state
+		return 'state'
 
 	# 根据动作执行下一步操作
 	def step(self, action_idx):
@@ -344,6 +377,7 @@ class Environment:
 
 		while True:
 			self.idx += 1
+			print(self.idx)
 			if self.df.iloc[self.idx]['status'] == 'leave':
 				row = self.df.iloc[self.idx]
 				self.env_rd_change(row)
@@ -364,14 +398,18 @@ class Environment:
 
 
 if __name__ == '__main__':
+	total_reward = 0
 	env = Environment()
 	while True:
 		observation = env.start()
 		while True:
 			one_action = env.random_action()		# 执行动作
+			# one_action = env.fcfs_action()
 			environment, one_reward, done = env.step(one_action)
 			total_reward += one_reward
 			if done:
 				# 游戏结束
 				print("done")
 				break
+		break
+	print(total_reward/1000)

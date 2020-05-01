@@ -209,21 +209,21 @@ class Baselines:
 		reward = 0
 		action = self.vm_locate_idx[row['ReqNo']][0]
 		if action == 'local':
-			reward += 800
+			reward += 200
 		elif action == 'neigh':
-			reward += 800
+			reward += 200
 			if row['delay_sen'] == 0:
 				pass
 			else:
-				reward -= 200  # 延时敏感，奖励-200
-			reward -= (int(row['bandwidth'] / 1000) + 1) * 100  # 占用带宽，带宽越大，惩罚越大，100-300之间
+				reward -= -50  # 延时敏感，奖励--50
+			reward -= (int(row['bandwidth'] / 1000) + 1) * 10  # 占用带宽，带宽越大，惩罚越大，100-300之间
 		elif action == 'DC':		# 数据中心
-			reward += 800  # 成功接入数据中心，奖励50
+			reward += -50  # 成功接入数据中心，奖励50
 			if row['delay_sen'] == 0:
 				pass
 			else:
-				reward -= 400		# 延时敏感，奖励-400
-			reward -= (int(row['bandwidth'] / 1000) + 1) * 200  # 占用带宽，带宽越大，惩罚越大，200-600之间
+				reward -= 100		# 延时敏感，奖励-400
+			reward -= (int(row['bandwidth'] / 1000) + 1) * 20  # 占用带宽，带宽越大，惩罚越大，200-600之间
 		else:			# block
 			reward -= 1000
 		return reward
