@@ -7,7 +7,7 @@ import numpy as np
 import PIL
 # import reinforce.network.traffic as traffic
 import traffic
-
+import reward as rw
 
 class Environment:
 	def __init__(
@@ -107,19 +107,23 @@ class Environment:
 
 	# 某个请求接入，更新虚拟机所在节点的负载
 	def fill_current_load(self, row):
-		if self.vm_locate_idx[row['ReqNo']][0] == 'DC':  # DC的CPU资源无限
+		if self.vm_locate_idx[row['ReqNo']][0] == 'DC':			# DC的CPU资源无限
+			pass
+		elif self.vm_locate_idx[row['ReqNo']][0] == 'block':	# 阻塞
 			pass
 		else:
-			vm_locate = self.vm_locate_idx[row['ReqNo']][1]  # 虚拟机的具体位置
+			vm_locate = self.vm_locate_idx[row['ReqNo']][1]		# 虚拟机的具体位置
 			self.curr_load[vm_locate][0] += row['cpu']
 			self.curr_load[vm_locate][1] += row['ram']
 
 	# 某个请求离开，更新虚拟机所在节点的负载
 	def rele_current_load(self, row):
-		if self.vm_locate_idx[row['ReqNo']][0] == 'DC':  # DC的CPU资源无限
+		if self.vm_locate_idx[row['ReqNo']][0] == 'DC':			# DC的CPU资源无限
+			pass
+		elif self.vm_locate_idx[row['ReqNo']][0] == 'block':	# 阻塞
 			pass
 		else:
-			vm_locate = self.vm_locate_idx[row['ReqNo']][1]  # 虚拟机的具体位置
+			vm_locate = self.vm_locate_idx[row['ReqNo']][1]		# 虚拟机的具体位置
 			self.curr_load[vm_locate][0] -= row['cpu']
 			self.curr_load[vm_locate][1] -= row['ram']
 
@@ -259,29 +263,38 @@ class Environment:
 				vm_locate = DC_node
 			return locate_flag, vm_locate, shortest_path
 
-	# reward函数，根据当前的状态及动作给出相应的reward
-	def get_reward(self, action, row):
-		reward = 0
-		locate_flag, vm_locate, shortest_path = self.action_judge(action, row)
-		if locate_flag == 'local':
-			reward += 250
-		elif locate_flag == 'neigh':
-			reward += 250
-			if row['delay_sen'] == 0:
-				pass
-			else:
-				reward -= 50  # 延时敏感，奖励-50
-			reward -= (int(row['bandwidth'] / 1000) + 1) * 10		# 占用带宽，带宽越大，惩罚越大，10-30之间
-		elif locate_flag == 'DC':		# 数据中心
-			reward += 250		# 成功接入数据中心，奖励250
-			if row['delay_sen'] == 0:
-				pass
-			else:
-				reward -= 100		# 延时敏感，奖励-100
-			reward -= (int(row['bandwidth'] / 1000) + 1) * 20		# 占用带宽，带宽越大，惩罚越大，20-60之间
-		else:			# block
-			reward -= 1000
-		return reward
+	# 判断当前的环境哪里是空余的，一共8种情况
+	def env_judge(self, row):
+		flag = ''
+		local_flag = 0
+		neigh_flag = 0
+		DC_flag = 0
+		node = row['area_id'] * 4 + row['node_id'] + 1
+		
+		# 判断本地
+		if self.curr_load[node][0] + row['cpu'] <= self.CPU_ONE and \
+			self.curr_load[node][1] + row['ram'] <= self.RAM_ONE:
+			local_flag = 1
+
+		# 判断neigh
+		neigh_node = row['area_id'] * 4
+		shortest_path = nx.shortest_path(self.G, source=node, target=neigh_node)
+		if self.curr_load[neigh_node][0] + row['cpu'] <= self.CPU_TWO and \
+			self.curr_load[neigh_node][1] + row['ram'] <= self.RAM_TWO and \
+			self.is_enough_bd(row, shortest_path):		# 成功接入neigh
+			neigh_flag = 1
+
+		# 判断数据中心
+		if row['area_id'] < 2:			# 区域0和1使用数据中心‘16’
+			DC_node = 16
+		else:
+			DC_node = 17
+		shortest_path = nx.shortest_path(self.G, source=node, target=DC_node)
+		if self.is_enough_bd(row, shortest_path):		# 成功接入DC
+			DC_flag = 1
+
+		flag = str(local_flag) + str(neigh_flag) + str(DC_flag)		# 8种情况
+		return flag
 
 	# 从三个动作中随机取一个
 	def random_action(self):
@@ -320,29 +333,8 @@ class Environment:
 			action = 2
 			return action
 		return action
-	
-	'''
-	# 观察到的是图像
-	def observation(self, ReqNo):
-		plt.clf()
-		nx.draw(self.G_graph, self.pos, with_labels=False, node_color=self.ncolors, node_shape="o",
-				node_size=self.nsize, width=self.esize, edge_color=self.ecolors)
-		plt.xlim(-8, 10)			# 设置首界面X轴坐标范围
-		plt.ylim(-25, 12)			# 设置首界面Y轴坐标范围
-		plt.style.use('dark_background')
-		buffer_ = io.BytesIO()
-		fig_path = './state/env_' + str(ReqNo) + '.png'
-		# plt.savefig(fig_path)		# 正式版记得删掉
-		plt.savefig(buffer_, format='png')
-		buffer_.seek(0)
-		dataPIL = PIL.Image.open(buffer_)
-		data = np.asarray(dataPIL)
-		state = cv2.cvtColor(data, cv2.COLOR_BGR2GRAY)
-		state = cv2.resize(state, (512, 512))
-		# cv2.imwrite(fig_path,state)
-		return state
 
-	'''
+	# 观测到的是图像
 	def observation(self, ReqNo):
 		return 'state'
 		plt.clf()
@@ -360,14 +352,15 @@ class Environment:
 		state = cv2.cvtColor(data, cv2.COLOR_BGR2GRAY)
 		state = cv2.resize(state, (512, 512))
 		cv2.imwrite(fig_path, state)
-		return 'state'
+		return state
 
 	# 根据动作执行下一步操作
 	def step(self, action_idx):
 		action = self.actions[action_idx]
 		is_done = False
 		row = self.df.iloc[self.idx]
-		reward = self.get_reward(action, row)       # 该动作获得的奖励
+		env_flag = self.env_judge(row)
+		reward = rw.get_reward(env_flag, action, row)		# 该动作获得的奖励
 		self.env_react(action, row)
 
 		if row['ReqNo'] == self.REQ_NUM - 1:
@@ -396,20 +389,33 @@ class Environment:
 		self.state_add_req(row)
 		return self.observation(0)
 
+	def sts(self):
+		show = {'block': 0, 'local': 0, 'neigh':0, 'DC': 0}
+		for key, value in self.vm_locate_idx.items():
+			show[value[0]] += 1
+		for key, value in show.items():
+			print(key, value)
 
 if __name__ == '__main__':
 	total_reward = 0
+	minus_10_count = 0
 	env = Environment()
 	while True:
 		observation = env.start()
 		while True:
-			one_action = env.random_action()		# 执行动作
-			# one_action = env.fcfs_action()
+			# one_action = env.random_action()		# 执行随机动作
+			one_action = env.fcfs_action()			# 执行先来先服务动作
+			# print(env.actions[one_action])
 			environment, one_reward, done = env.step(one_action)
 			total_reward += one_reward
+			if one_reward == -10:
+				minus_10_count += 1
 			if done:
 				# 游戏结束
 				print("done")
 				break
+		env.sts()
 		break
-	print(total_reward/1000)
+	print(total_reward)
+	print('number of -10:')
+	print(minus_10_count)

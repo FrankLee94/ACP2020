@@ -14,6 +14,8 @@ RATIO_DELAY_SEN = 0.3		# 延时敏感业务占比
 MAX_CPU = 30				# 单个请求最大的CPU
 MAX_RAM = 30				# 单个请求最大的RAM
 REQ_NUM = 10000				# 请求的总数目
+CPU_LIST = [1, 2, 5, 10, 50, 100]
+RAM_LIST = [1, 2, 5, 10, 50, 100]
 
 
 # 产生一个请求Probability_Poisson
@@ -33,8 +35,10 @@ def event_generation(arr_rate, ser_rate):
 
 	area_id = random.randint(0, AREA_NUM - 1)		# 从0开始到AREA_NUM - 1
 	node_id = random.randint(0, NODE_NUM - 1)		# 从0开始到NODE_NUM - 1
-	cpu = random.randint(1, MAX_CPU)				# 从1开始到MAX_CPU
-	ram = random.randint(1, MAX_RAM)				# 从1开始到MAX_RAM
+	# cpu = random.randint(1, MAX_CPU)				# 从1开始到MAX_CPU
+	# ram = random.randint(1, MAX_RAM)				# 从1开始到MAX_RAM
+	cpu = random.choice(CPU_LIST)					# 从列表中选择一个
+	ram = random.choice(RAM_LIST)					# 从列表中选择一个
 	bandwidth = (random.randint(1, 60)) * 50		# 50 - 3000 M, granularity is 50M
 	if random.random() > RATIO_DELAY_SEN: 
 		delay_sen = 0   # 0代表延时不敏感，概率1 - RATIO_DELAY_SEN
